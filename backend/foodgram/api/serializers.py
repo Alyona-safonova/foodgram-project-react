@@ -4,11 +4,9 @@ from django.core import exceptions as django_exceptions
 from django.shortcuts import get_object_or_404
 from djoser.serializers import UserCreateSerializer, UserSerializer
 from drf_base64.fields import Base64ImageField
-from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
-                            ShoppingCart, Tag)
+from recipes.models import Ingredient, IngredientInRecipe, Recipe, Tag
 from rest_framework import exceptions, serializers
 from rest_framework.relations import PrimaryKeyRelatedField
-from user.models import Subscribe
 
 User = get_user_model()
 
@@ -23,12 +21,13 @@ class UserReadSerializer(UserSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
+        result = False
         if request:
-            if not request.user.is_anonymous:
-                return Subscribe.objects.filter(
-                    user=request.user,
-                    author=obj).exists()
-        return False
+            user = request.user
+            if not user.is_anonymous and obj != user:
+                if obj.subscribing.filter(user=user).exists():
+                    result = True
+        return result
 
 
 class SignUpSerializer(UserCreateSerializer):
@@ -129,18 +128,17 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                   'text', 'cooking_time')
 
     def get_is_favorited(self, obj):
+        user = self.context['request'].user
         return (
-            self.context.get('request').user.is_authenticated
-            and Favorite.objects.filter(user=self.context['request'].user,
-                                        recipe=obj).exists()
+            user.is_authenticated
+            and obj.favorites.filter(user=user).exists()
         )
 
     def get_is_in_shopping_cart(self, obj):
+        user = self.context['request'].user
         return (
-            self.context.get('request').user.is_authenticated
-            and ShoppingCart.objects.filter(
-                user=self.context['request'].user,
-                recipe=obj).exists()
+            user.is_authenticated
+            and user.user_shopping_cart.filter(recipe=obj).exists()
         )
 
 
@@ -196,11 +194,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
             )
 
         ingredients = [item['id'] for item in value]
-        for ingredient in ingredients:
-            if ingredients.count(ingredient) > 1:
-                raise exceptions.ValidationError(
-                    'У рецепта не может быть два одинаковых ингредиента.'
-                )
+        if len(ingredients) != len(set(ingredients)):
+            raise exceptions.ValidationError(
+                'У рецепта не может быть два одинаковых ингредиента.'
+            )
 
         return value
 
@@ -212,16 +209,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         recipe = Recipe.objects.create(author=author, **validated_data)
         recipe.tags.set(tags)
 
-        for ingredient in ingredients:
-            amount = ingredient['amount']
-            ingredient = get_object_or_404(Ingredient, pk=ingredient['id'])
-
-            IngredientInRecipe.objects.create(
-                recipe=recipe,
-                ingredient=ingredient,
-                amount=amount
-            )
-
+        batch = [IngredientInRecipe(
+            recipe=recipe,
+            ingredient=get_object_or_404(Ingredient, pk=row['id']),
+            amount=row['amount']) for row in ingredients]
+        IngredientInRecipe.objects.bulk_create(batch)
         return recipe
 
     def update(self, instance, validated_data):
@@ -232,17 +224,11 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         ingredients = validated_data.pop('ingredients', None)
         if ingredients is not None:
             instance.ingredients.clear()
-
-            for ingredient in ingredients:
-                amount = ingredient['amount']
-                ingredient = get_object_or_404(Ingredient, pk=ingredient['id'])
-
-                IngredientInRecipe.objects.update_or_create(
-                    recipe=instance,
-                    ingredient=ingredient,
-                    defaults={'amount': amount}
-                )
-
+            batch = [IngredientInRecipe(
+                recipe=instance,
+                ingredient=get_object_or_404(Ingredient, pk=row['id']),
+                amount=row['amount']) for row in ingredients]
+            IngredientInRecipe.objects.bulk_create(batch)
         return super().update(instance, validated_data)
 
     def to_representation(self, instance):
@@ -287,10 +273,10 @@ class SubscriptionsSerializer(serializers.ModelSerializer):
                   'recipes', 'recipes_count')
 
     def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
         return (
-            self.context.get('request').user.is_authenticated
-            and Subscribe.objects.filter(user=self.context['request'].user,
-                                         author=obj).exists()
+            user.is_authenticated
+            and obj.subscribing.filter(user=user).exists()
         )
 
     def get_recipes_count(self, obj):
@@ -326,10 +312,10 @@ class SubscribeAuthorSerializer(serializers.ModelSerializer):
         return obj
 
     def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
         return (
-            self.context.get('request').user.is_authenticated
-            and Subscribe.objects.filter(user=self.context['request'].user,
-                                         author=obj).exists()
+            user.is_authenticated
+            and obj.subscribing.filter(user=user).exists()
         )
 
     def get_recipes_count(self, obj):

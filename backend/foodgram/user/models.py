@@ -10,7 +10,7 @@ class User(AbstractUser):
     email = models.EmailField(max_length=250, unique=True)
 
     class Meta:
-        ordering = ['id']
+        ordering = ['username']
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
@@ -33,6 +33,7 @@ class Subscribe(models.Model):
     )
 
     class Meta:
+        ordering = ['-author_id']
         constraints = [
             UniqueConstraint(fields=['user', 'author'],
                              name='unique_subscription')

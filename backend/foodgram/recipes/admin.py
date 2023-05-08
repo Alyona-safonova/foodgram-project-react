@@ -9,11 +9,17 @@ class TagAdmin(admin.ModelAdmin):
     empty_value_display = '-пусто-'
 
 
+class RecipeIngredientInline(admin.StackedInline):
+    model = IngredientInRecipe
+    min_num = 1
+
+
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author', 'id')
     readonly_fields = ('in_favorites',)
     list_filter = ('name', 'author', 'tags')
-    empty_value_display = '-пусто-'
+    empty_value_display = '-пусто-',
+    inlines = (RecipeIngredientInline, )
 
     @admin.display(description='В избранном')
     def in_favorites(self, obj):
