@@ -20,10 +20,13 @@ class UserReadSerializer(UserSerializer):
                   'last_name', 'is_subscribed')
 
     def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
+        request = self.context.get('request')
         return (
-            not user.is_anonymous and obj != user
-            and obj.subscribing.filter(user=user).exists()
+            request is not None
+            and request.user is not None
+            and not request.user.is_anonymous
+            and request.user != obj
+            and obj.subscribing.filter(user=request.user).exists()
         )
 
 
