@@ -9,7 +9,7 @@ services:
       - ./.env
 
   backend:
-    # image: 
+    image: alyonasafonova/foodgram_backend:latest
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -23,7 +23,7 @@ services:
       - ./.env
 
   frontend:
-    # image: 
+    image: alyonasafonova/foodgram_frontend:latest 
     build:
       context: ../frontend
       dockerfile: Dockerfile
