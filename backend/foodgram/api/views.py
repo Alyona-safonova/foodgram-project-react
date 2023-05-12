@@ -96,8 +96,6 @@ class IngredientsViewSet(mixins.ListModelMixin,
     permission_classes = (AllowAny,)
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = (filters.SearchFilter, )
-    search_fields = ('^name', )
     filterset_class = IngredientFilter
 
 
