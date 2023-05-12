@@ -78,7 +78,7 @@ class UserViewSet(mixins.CreateModelMixin,
                               author=author).delete()
             return Response({'detail': 'Успешная отписка'},
                             status=status.HTTP_204_NO_CONTENT)
-        return
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 class TagsViewset(mixins.ListModelMixin,
@@ -136,7 +136,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
                               recipe=recipe).delete()
             return Response({'detail': 'Рецепт успешно удален из избранного.'},
                             status=status.HTTP_204_NO_CONTENT)
-        return
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['post', 'delete'],
             permission_classes=(IsAuthenticated,),
@@ -164,7 +164,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
                 {'detail': 'Рецепт успешно удален из списка покупок.'},
                 status=status.HTTP_204_NO_CONTENT
             )
-        return
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=['get'],
             permission_classes=(IsAuthenticated,))
