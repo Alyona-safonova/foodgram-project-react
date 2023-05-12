@@ -78,6 +78,7 @@ class UserViewSet(mixins.CreateModelMixin,
                               author=author).delete()
             return Response({'detail': 'Успешная отписка'},
                             status=status.HTTP_204_NO_CONTENT)
+        return
 
 
 class TagsViewset(mixins.ListModelMixin,
@@ -135,6 +136,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
                               recipe=recipe).delete()
             return Response({'detail': 'Рецепт успешно удален из избранного.'},
                             status=status.HTTP_204_NO_CONTENT)
+        return
 
     @action(detail=True, methods=['post', 'delete'],
             permission_classes=(IsAuthenticated,),
@@ -146,10 +148,10 @@ class RecipesViewSet(viewsets.ModelViewSet):
             serializer = RecipeSerializer(recipe, data=request.data,
                                           context={'request': request})
             serializer.is_valid(raise_exception=True)
-            shoppingCart = ShoppingCart.objects.get_or_create(
+            shopping_cart = ShoppingCart.objects.get_or_create(
                 user=request.user,
                 recipe=recipe)
-            if shoppingCart:
+            if shopping_cart:
                 return Response(serializer.data,
                                 status=status.HTTP_201_CREATED)
             return Response({'errors': 'Рецепт уже в списке покупок.'},
@@ -162,6 +164,7 @@ class RecipesViewSet(viewsets.ModelViewSet):
                 {'detail': 'Рецепт успешно удален из списка покупок.'},
                 status=status.HTTP_204_NO_CONTENT
             )
+        return
 
     @action(detail=False, methods=['get'],
             permission_classes=(IsAuthenticated,))
